@@ -39,7 +39,7 @@ export function overview(appid: number): any {
 export async function addShortcut(name: string, exe: string, startDir: string, launchOptions: string,
   compatTool: string): Promise<number> {
   const id: number = await SteamClient.Apps.AddShortcut(name, exe, startDir, launchOptions);
-  if (!id) throw new Error("Steam не вернул appid");
+  if (!id) throw new Error("Steam returned no appid");
   SteamClient.Apps.SetShortcutName(id, name);
   SteamClient.Apps.SetShortcutExe(id, `"${exe}"`);
   SteamClient.Apps.SetShortcutStartDir(id, `"${startDir}"`);

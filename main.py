@@ -134,10 +134,10 @@ class Plugin:
     def _steam(self):
         root = steamenv.steam_root(decky.DECKY_USER_HOME)
         if not root:
-            raise RuntimeError("Steam не найден")
+            raise RuntimeError("Steam not found")
         user = steamenv.active_user(root)
         if not user:
-            raise RuntimeError("Не найден пользователь Steam")
+            raise RuntimeError("No Steam user found")
         libs = steamenv.library_folders(root)
         return root, user, libs
 

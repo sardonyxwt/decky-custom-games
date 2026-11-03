@@ -7,6 +7,7 @@ import { openMapping, openUrl, openViewer } from "./modals";
 import {
   loadNews, NewsItem, useAchievementDefs, useAchievementProgress, useDetails, useStoreItem,
 } from "./pageData";
+import { isRussian, t } from "./i18n";
 import { getPluginState } from "./state";
 import { Styles } from "./styles";
 
@@ -50,7 +51,7 @@ function useNoSideScroll() {
 
 function locale(): string | undefined {
   const l = getPluginState().settings?.data_lang;
-  return l === "russian" || l === "ru" ? "ru-RU" : undefined;
+  return isRussian() || l === "russian" || l === "ru" ? "ru-RU" : undefined;
 }
 
 function fmtDay(t: number) {
@@ -61,13 +62,14 @@ function fmtDate(t: number) {
   return new Date(t * 1000).toLocaleDateString(locale(), { day: "numeric", month: "short", year: "numeric" });
 }
 
-const NEWS_TYPE: Record<number, string> = {
-  12: "Патч", 13: "Обновление", 14: "Крупное обновление", 28: "Новости", 9: "Трансляция", 11: "Внутриигровое событие",
-  15: "Выход DLC", 20: "Распродажа",
+const NEWS_TYPE: Record<number, [string, string]> = {
+  12: ["Patch notes", "Патч"], 13: ["Update", "Обновление"], 14: ["Major update", "Крупное обновление"],
+  28: ["News", "Новости"], 9: ["Broadcast", "Трансляция"], 11: ["In-game event", "Внутриигровое событие"],
+  15: ["DLC release", "Выход DLC"], 20: ["Sale", "Распродажа"],
 };
 
 function Loading({ error }: { error?: string | null }) {
-  return <div className="cg-dim" style={{ padding: "20px 0" }}>{error ? `Не удалось загрузить: ${error}` : "Загрузка…"}</div>;
+  return <div className="cg-dim" style={{ padding: "20px 0" }}>{error ? t(`Could not load: ${error}`, `Не удалось загрузить: ${error}`) : t("Loading…", "Загрузка…")}</div>;
 }
 
 // ---------------- Activity ----------------
@@ -110,7 +112,7 @@ export function ActivityTab({ appid, game, native }: TabProps) {
       <Focusable className="cg-card cg-news" onActivate={() => openUrl(n.url)} onClick={() => openUrl(n.url)}>
         <div className="cg-news-img" style={{ backgroundImage: `url("${n.image || fallback}")` }} />
         <div className="cg-news-body">
-          <div className="cg-news-type">{NEWS_TYPE[n.type] ?? "Событие"}</div>
+          <div className="cg-news-type">{NEWS_TYPE[n.type] ? t(...NEWS_TYPE[n.type]) : t("Event", "Событие")}</div>
           <div className="cg-news-title">{n.title}</div>
           <div className="cg-news-sum">{n.summary}</div>
           <div className="cg-news-meta">
@@ -138,7 +140,7 @@ export function ActivityTab({ appid, game, native }: TabProps) {
     if (g.time < oldest) continue;
     entries.push({ time: g.time, key: "ach-" + day, node: (
       <Focusable className="cg-card cg-achday" {...READABLE}>
-        <div className="cg-achday-head"><FaTrophy /> Получено достижений: {g.list.length}</div>
+        <div className="cg-achday-head"><FaTrophy /> {t("Achievements unlocked: ", "Получено достижений: ")}{g.list.length}</div>
         <div className="cg-achday-list">
           {g.list.slice(0, 8).map((d) => (
             <div key={d.name} className="cg-achday-item">
@@ -146,7 +148,7 @@ export function ActivityTab({ appid, game, native }: TabProps) {
               <div><div className="cg-ach-title">{d.title}</div><div className="cg-ach-desc">{d.desc}</div></div>
             </div>
           ))}
-          {g.list.length > 8 && <div className="cg-dim">и ещё {g.list.length - 8}</div>}
+          {g.list.length > 8 && <div className="cg-dim">{t(`and ${g.list.length - 8} more`, `и ещё ${g.list.length - 8}`)}</div>}
         </div>
       </Focusable>
     ) });
@@ -156,9 +158,9 @@ export function ActivityTab({ appid, game, native }: TabProps) {
   return (
     <div className="cg-tab" ref={root}>
       <Styles />
-      <div className="cg-h2">Новости и достижения</div>
+      <div className="cg-h2">{t("News and achievements", "Новости и достижения")}</div>
       {!news && <Loading error={error} />}
-      {news && !entries.length && <div className="cg-dim">У этой игры нет новостей в Steam.</div>}
+      {news && !entries.length && <div className="cg-dim">{t("This game has no news on Steam.", "У этой игры нет новостей в Steam.")}</div>}
       {entries.map((e) => {
         const day = fmtDay(e.time);
         const sep = day !== lastDay ? <div className="cg-day">{day}</div> : null;
@@ -166,7 +168,7 @@ export function ActivityTab({ appid, game, native }: TabProps) {
         return <div key={e.key}>{sep}{e.node}</div>;
       })}
       {news && !end && (
-        <Focusable className="cg-buttons"><DialogButton onClick={more}>Показать ещё</DialogButton></Focusable>
+        <Focusable className="cg-buttons"><DialogButton onClick={more}>{t("Show more", "Показать ещё")}</DialogButton></Focusable>
       )}
       {native}
     </div>
@@ -175,8 +177,8 @@ export function ActivityTab({ appid, game, native }: TabProps) {
 
 // ---------------- Game info ----------------
 
-const DECK: Record<number, [string, boolean]> = {
-  3: ["Проверено", true], 2: ["Играбельно", true], 1: ["Не поддерживается", false],
+const DECK: Record<number, [[string, string], boolean]> = {
+  3: [["Verified", "Проверено"], true], 2: [["Playable", "Играбельно"], true], 1: [["Unsupported", "Не поддерживается"], false],
 };
 
 function featureIcon(id: number) {
@@ -242,15 +244,15 @@ export function GameInfoTab({ appid, game }: TabProps) {
   const rows: [string, ReactNode][] = [];
   const devs = (basic.developers ?? []).map((d: any) => d.name).join(", ") || details?.developers?.join(", ");
   const pubs = (basic.publishers ?? []).map((d: any) => d.name).join(", ") || details?.publishers?.join(", ");
-  if (devs) rows.push(["Разработчик:", devs]);
-  if (pubs) rows.push(["Издатель:", pubs]);
-  if (basic.franchises?.length) rows.push(["Серия:", basic.franchises.map((f: any) => f.name).join(", ")]);
-  if (details?.genres?.length) rows.push(["Жанр:", details.genres.map((g) => g.description).join(", ")]);
-  if (release) rows.push(["Дата выхода:", fmtDate(release)]);
-  else if (details?.release_date?.date) rows.push(["Дата выхода:", details.release_date.date]);
+  if (devs) rows.push([t("Developer:", "Разработчик:"), devs]);
+  if (pubs) rows.push([t("Publisher:", "Издатель:"), pubs]);
+  if (basic.franchises?.length) rows.push([t("Franchise:", "Серия:"), basic.franchises.map((f: any) => f.name).join(", ")]);
+  if (details?.genres?.length) rows.push([t("Genre:", "Жанр:"), details.genres.map((g) => g.description).join(", ")]);
+  if (release) rows.push([t("Release date:", "Дата выхода:"), fmtDate(release)]);
+  else if (details?.release_date?.date) rows.push([t("Release date:", "Дата выхода:"), details.release_date.date]);
   if (rev?.review_count) {
-    rows.push(["Отзывы:", <span><span className="cg-good">{rev.review_score_label}</span>
-      {` (${rev.percent_positive}% из ${rev.review_count.toLocaleString(locale())})`}</span>]);
+    rows.push([t("Reviews:", "Отзывы:"), <span><span className="cg-good">{rev.review_score_label}</span>
+      {t(` (${rev.percent_positive}% of ${rev.review_count.toLocaleString(locale())})`, ` (${rev.percent_positive}% из ${rev.review_count.toLocaleString(locale())})`)}</span>]);
   }
   if (details?.metacritic?.score) rows.push(["Metacritic:", String(details.metacritic.score)]);
   const desc = details?.short_description || basic.short_description || "";
@@ -274,42 +276,42 @@ export function GameInfoTab({ appid, game }: TabProps) {
           </div>
         )}
       </div>
-      {deck && <div className="cg-line">Steam Deck: <b className={deck[1] ? "cg-good" : ""}>{deck[0]}</b> (оценка Valve)</div>}
-      {langs && <div className="cg-line">Языки: {langs}{langs.includes("*") ? "  (* — с озвучкой)" : ""}</div>}
-      {proton && <div className="cg-line">Запускается через <b>{proton}</b>.</div>}
+      {deck && <div className="cg-line">Steam Deck: <b className={deck[1] ? "cg-good" : ""}>{t(...deck[0])}</b> {t("(Valve's rating)", "(оценка Valve)")}</div>}
+      {langs && <div className="cg-line">{t("Languages: ", "Языки: ")}{langs}{langs.includes("*") ? t("  (* — with voice-over)", "  (* — с озвучкой)") : ""}</div>}
+      {proton && <div className="cg-line">{t("Runs through ", "Запускается через ")}<b>{proton}</b>.</div>}
       <Focusable className="cg-buttons" flow-children="row">
-        <DialogButton onClick={() => openUrl(`https://store.steampowered.com/app/${sid}`)}>Магазин</DialogButton>
-        <DialogButton onClick={() => openUrl(community)}>Центр сообщества</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/discussions/`)}>Обсуждения</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/guides/`)}>Руководства</DialogButton>
-        {details?.website && <DialogButton onClick={() => openUrl(details.website!)}>Сайт игры</DialogButton>}
+        <DialogButton onClick={() => openUrl(`https://store.steampowered.com/app/${sid}`)}>{t("Store page", "Магазин")}</DialogButton>
+        <DialogButton onClick={() => openUrl(community)}>{t("Community hub", "Центр сообщества")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/discussions/`)}>{t("Discussions", "Обсуждения")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/guides/`)}>{t("Guides", "Руководства")}</DialogButton>
+        {details?.website && <DialogButton onClick={() => openUrl(details.website!)}>{t("Website", "Сайт игры")}</DialogButton>}
       </Focusable>
       {!!paras.length && (
         <>
-          <div className="cg-h3">Об игре</div>
+          <div className="cg-h3">{t("About the game", "Об игре")}</div>
           {(full ? paras : paras.slice(0, 3)).map((p, i) => (
             <Focusable key={i} className={"cg-para" + (p.head ? " cg-head" : "")} noFocusRing {...READABLE}>{p.text}</Focusable>
           ))}
           {paras.length > 3 && (
             <Focusable className="cg-buttons">
-              <DialogButton onClick={() => setFull(!full)}>{full ? "Свернуть" : "Читать полностью"}</DialogButton>
+              <DialogButton onClick={() => setFull(!full)}>{full ? t("Show less", "Свернуть") : t("Read more", "Читать полностью")}</DialogButton>
             </Focusable>
           )}
         </>
       )}
       <Focusable className="cg-card cg-mapping" flow-children="row">
-        <span>Данные Steam: {basic.name || item?.m_strName || details?.name || sid} ({sid}) · {sourceText(game.appid_source)}</span>
-        <DialogButton className="cg-btn" onClick={() => openMapping(appid, game.title)}>Изменить</DialogButton>
+        <span>{t("Steam data: ", "Данные Steam: ")}{basic.name || item?.m_strName || details?.name || sid} ({sid}) · {sourceText(game.appid_source)}</span>
+        <DialogButton className="cg-btn" onClick={() => openMapping(appid, game.title)}>{t("Change", "Изменить")}</DialogButton>
       </Focusable>
     </div>
   );
 }
 
 function sourceText(src: string): string {
-  if (src.startsWith("file:")) return `найдено в файле ${src.slice(5).split("/").pop()}`;
-  if (src.startsWith("prefix:")) return `найдено в сохранениях ${src.slice(7)}`;
-  if (src.startsWith("name:")) return "найдено по названию";
-  if (src === "manual") return "выбрано вручную";
+  if (src.startsWith("file:")) return t(`found in ${src.slice(5).split("/").pop()}`, `найдено в файле ${src.slice(5).split("/").pop()}`);
+  if (src.startsWith("prefix:")) return t(`found in ${src.slice(7)} saves`, `найдено в сохранениях ${src.slice(7)}`);
+  if (src.startsWith("name:")) return t("matched by name", "найдено по названию");
+  if (src === "manual") return t("chosen by hand", "выбрано вручную");
   return "";
 }
 
@@ -336,21 +338,22 @@ export function YourStuffTab({ appid, game, native }: TabProps) {
   return (
     <div className="cg-tab" ref={root}>
       <Styles />
-      <div className="cg-h2">Достижения</div>
+      <div className="cg-h2">{t("Achievements", "Достижения")}</div>
       {!defs && <Loading error={error} />}
-      {defs && !total && <div className="cg-dim">У этой игры нет достижений в Steam.</div>}
+      {defs && !total && <div className="cg-dim">{t("This game has no achievements on Steam.", "У этой игры нет достижений в Steam.")}</div>}
       {!!total && (
         <>
           <div style={{ fontSize: 18 }}>
-            {prog?.files ? <>Получено <b style={{ color: "#fff" }}>{earned.length}</b> из {total}</> : <>Всего: {total}</>}
+            {prog?.files ? <>{t("Unlocked ", "Получено ")}<b style={{ color: "#fff" }}>{earned.length}</b>{t(" of ", " из ")}{total}</> : <>{t("Total: ", "Всего: ")}{total}</>}
           </div>
           {!!prog?.files && <div className="cg-bar"><div style={{ width: `${(earned.length / total) * 100}%` }} /></div>}
           {prog && !prog.files && (
             <div className="cg-dim" style={{ margin: "8px 0 16px" }}>
-              Прогресс появится после запуска игры, если её эмулятор Steam сохраняет достижения (GSE/Goldberg, RUNE, CODEX).
+              {t("Progress appears after the game has run, if its Steam emulator saves achievements (GSE/Goldberg, RUNE, CODEX).",
+                "Прогресс появится после запуска игры, если её эмулятор Steam сохраняет достижения (GSE/Goldberg, RUNE, CODEX).")}
             </div>
           )}
-          {!!earned.length && <div className="cg-h3">Полученные</div>}
+          {!!earned.length && <div className="cg-h3">{t("Unlocked", "Полученные")}</div>}
           <Focusable className="cg-ach-grid" flow-children="grid">
             {earned.map((a) => (
               <Focusable key={a.name} className="cg-card cg-ach" {...READABLE}>
@@ -359,22 +362,22 @@ export function YourStuffTab({ appid, game, native }: TabProps) {
                   <div className="cg-ach-title">{a.title}</div>
                   <div className="cg-ach-desc">{a.desc}</div>
                 </div>
-                <div className="cg-ach-side">{a.time ? fmtDate(a.time) : ""}<br />{a.pct.toFixed(1)}% игроков</div>
+                <div className="cg-ach-side">{a.time ? fmtDate(a.time) : ""}<br />{a.pct.toFixed(1)}{t("% of players", "% игроков")}</div>
               </Focusable>
             ))}
           </Focusable>
-          {!!locked.length && <div className="cg-h3">{prog?.files ? "Ещё не получены" : "Все достижения"}</div>}
+          {!!locked.length && <div className="cg-h3">{prog?.files ? t("Locked", "Ещё не получены") : t("All achievements", "Все достижения")}</div>}
           <Focusable className="cg-ach-grid" flow-children="grid">
             {locked.map((a) => (
               <Focusable key={a.name} className="cg-card cg-ach cg-locked" {...READABLE}>
                 <img src={`${ICON_BASE}/${sid}/${a.icon_gray || a.icon}`} />
                 <div className="cg-ach-text">
                   <div className="cg-ach-title">{a.title}</div>
-                  <div className="cg-ach-desc">{a.hidden && !a.desc ? "Скрытое достижение" : a.desc}</div>
+                  <div className="cg-ach-desc">{a.hidden && !a.desc ? t("Hidden achievement", "Скрытое достижение") : a.desc}</div>
                 </div>
                 <div className="cg-ach-side">
                   {a.max > 0 && <>{a.cur} / {a.max}<br /></>}
-                  {a.pct.toFixed(1)}% игроков
+                  {a.pct.toFixed(1)}{t("% of players", "% игроков")}
                 </div>
               </Focusable>
             ))}
@@ -416,16 +419,16 @@ export function CommunityTab({ game, native }: TabProps) {
     <div className="cg-tab" ref={root}>
       <Styles />
       <Focusable className="cg-buttons" flow-children="row" style={{ marginTop: 8 }}>
-        <DialogButton onClick={() => openUrl(community)}>Центр сообщества</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/discussions/`)}>Обсуждения</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/guides/`)}>Руководства</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/screenshots/`)}>Скриншоты игроков</DialogButton>
-        <DialogButton onClick={() => openUrl(`${community}/workshop/`)}>Мастерская</DialogButton>
+        <DialogButton onClick={() => openUrl(community)}>{t("Community hub", "Центр сообщества")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/discussions/`)}>{t("Discussions", "Обсуждения")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/guides/`)}>{t("Guides", "Руководства")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/screenshots/`)}>{t("Player screenshots", "Скриншоты игроков")}</DialogButton>
+        <DialogButton onClick={() => openUrl(`${community}/workshop/`)}>{t("Workshop", "Мастерская")}</DialogButton>
       </Focusable>
       {!item && <Loading error={error} />}
       {!!trailers.length && (
         <>
-          <div className="cg-h3">Трейлеры</div>
+          <div className="cg-h3">{t("Trailers", "Трейлеры")}</div>
           <Focusable className="cg-media" flow-children="grid">
             {trailers.map((t, i) => (
               <TrailerCard key={t.m_nBaseID ?? i} t={t} onOpen={() => openViewer(
@@ -437,7 +440,7 @@ export function CommunityTab({ game, native }: TabProps) {
       )}
       {!!shots.length && (
         <>
-          <div className="cg-h3">Скриншоты</div>
+          <div className="cg-h3">{t("Screenshots", "Скриншоты")}</div>
           <Focusable className="cg-media" flow-children="grid">
             {shots.map((s, i) => (
               <Focusable key={s} className="cg-card cg-shot" style={{ backgroundImage: `url("${thumb(s)}")` }}

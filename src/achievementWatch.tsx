@@ -4,6 +4,7 @@ import { toaster } from "@decky/api";
 import * as be from "./backend";
 import { getPluginState, gameFor, log } from "./state";
 import { language } from "./steam";
+import { t } from "./i18n";
 
 declare const SteamClient: any;
 
@@ -46,14 +47,14 @@ async function announce(appid: number, steamAppid: number, items: { name: string
     const icon = d?.icon ? `${ICON_BASE}/${steamAppid}/${d.icon}` : "";
     toaster.toast({
       title: d?.title || a.name,
-      body: d?.desc || "Достижение получено",
-      subtext: total ? `${gameFor(appid)?.title ?? ""} · ${d ? d.pct.toFixed(1) + "% игроков" : ""}` : undefined,
+      body: d?.desc || t("Achievement unlocked", "Достижение получено"),
+      subtext: total ? `${gameFor(appid)?.title ?? ""} · ${d ? d.pct.toFixed(1) + t("% of players", "% игроков") : ""}` : undefined,
       logo: icon ? <Icon src={icon} /> : undefined,
       duration: 6000,
       playSound: true,
       showToast: true,
     });
-    log(`Достижение: ${d?.title || a.name} (${gameFor(appid)?.title ?? appid})`);
+    log(t("Achievement: ", "Достижение: ") + `${d?.title || a.name} (${gameFor(appid)?.title ?? appid})`);
     await new Promise((r) => setTimeout(r, 1200)); // several at once: one after another
   }
 }

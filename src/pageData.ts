@@ -113,7 +113,7 @@ function eventSummary(ev: any): string {
 /** Steam news and events of a game through the client's own event store (same data the library shows). */
 export async function loadNews(steamAppid: number, offset: number, count: number): Promise<NewsItem[]> {
   return cached(`news:${steamAppid}:${offset}:${count}`, async () => {
-    if (typeof partnerEventStore === "undefined") throw new Error("partnerEventStore недоступен");
+    if (typeof partnerEventStore === "undefined") throw new Error("partnerEventStore is not available");
     const evs: any[] = await partnerEventStore.LoadPartnerEventsPageable(undefined, steamAppid, offset, count);
     return evs.map((ev) => {
       let title = "";

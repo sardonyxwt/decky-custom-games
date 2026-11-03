@@ -1,6 +1,7 @@
 // "Update library": find new games, add them to Steam, give them artwork; and the background upscale queue.
 import { toaster } from "@decky/api";
 import * as be from "./backend";
+import { t } from "./i18n";
 import { getPluginState, log, update } from "./state";
 import {
   addShortcut, ensureLogoPosition, gameRunning, isShortcut, setArtwork, setShortcutIcon, storeAssets,
@@ -23,10 +24,10 @@ export async function followDeps(): Promise<void> {
   }
   const d = getPluginState().deps;
   if (d.status === "ready") {
-    log("Зависимости установлены");
+    log(t("Dependencies installed", "Зависимости установлены"));
     void runArtQueue();
   } else if (d.status === "error") {
-    log(`Зависимости не установились: ${d.error}`, "error");
+    log(t(`Dependencies were not installed: ${d.error}`, `Зависимости не установились: ${d.error}`), "error");
   }
 }
 
@@ -35,10 +36,10 @@ export async function installDeps(): Promise<void> {
   const r = await be.installDeps();
   update({ deps: r.deps, upscaler: r.deps.status === "ready" });
   if (r.ok) {
-    log("Зависимости установлены");
+    log(t("Dependencies installed", "Зависимости установлены"));
     void runArtQueue();
   } else {
-    log(`Зависимости: ${r.error}`, "error");
+    log(t(`Dependencies: ${r.error}`, `Зависимости: ${r.error}`), "error");
   }
 }
 
@@ -57,7 +58,7 @@ async function resized(b64: string, mime: string, width: number, height: number,
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas недоступен");
+  if (!ctx) throw new Error("canvas is not available");
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   // Big reductions in halving steps, which keeps fine detail better than one jump.
@@ -82,7 +83,7 @@ async function resized(b64: string, mime: string, width: number, height: number,
 async function artworkForNewGame(appid: number, steamAppid: number, title: string, item: any) {
   const r = await be.artForNew(appid, steamAppid, title, storeAssets(item));
   if (!r.ok) {
-    log(`Обложки для «${title}»: ${r.error}`, "warn");
+    log(t(`Artwork for "${title}": ${r.error}`, `Обложки для «${title}»: ${r.error}`), "warn");
     return;
   }
   for (const a of r.assets) {
@@ -93,13 +94,14 @@ async function artworkForNewGame(appid: number, steamAppid: number, title: strin
         await be.artApplied(appid, a.kind, a.source, "");
       }
     } catch (e) {
-      log(`Обложка ${a.kind} для «${title}» не установлена: ${e}`, "warn");
+      log(t(`${a.kind} for "${title}" was not set: ${e}`, `Обложка ${a.kind} для «${title}» не установлена: ${e}`), "warn");
     }
   }
   if (r.assets.some((a) => a.kind === "logo")) await ensureLogoPosition(appid, r.logo_pos);
   if (r.icon) setShortcutIcon(appid, r.icon);
-  log(`Обложки «${title}»: ${r.assets.map((a) => `${a.kind} (${a.source})`).join(", ") || "не найдены"}`
-    + (r.icon ? ", иконка" : ""));
+  const list = r.assets.map((a) => `${a.kind} (${a.source})`).join(", ");
+  log(t(`Artwork for "${title}": ${list || "none found"}${r.icon ? ", icon" : ""}`,
+    `Обложки «${title}»: ${list || "не найдены"}${r.icon ? ", иконка" : ""}`));
 }
 
 // A button that finishes in a blink looks like it did nothing: keep its busy state on screen a moment.
@@ -118,56 +120,57 @@ export async function refreshLibrary(): Promise<void> {
   if (getPluginState().busy) return;
   const started = Date.now();
   let result = "";
-  update({ busy: "Ищу новые игры…" });
+  update({ busy: t("Looking for new games…", "Ищу новые игры…") });
   try {
     const scan = await be.scanLibrary();
     if (!scan.ok) {
-      log(`Поиск игр: ${scan.error}`, "error");
-      result = `Ошибка: ${scan.error}`;
+      log(t(`Game search: ${scan.error}`, `Поиск игр: ${scan.error}`), "error");
+      result = t(`Error: ${scan.error}`, `Ошибка: ${scan.error}`);
       return;
     }
     const attention = [
-      ...scan.busy.map((c) => ({ title: c.title, root: c.root, reason: "ещё распаковывается или скачивается" })),
-      ...scan.no_exe.map((c) => ({ title: c.title, root: c.root, reason: "не найден .exe игры" })),
+      ...scan.busy.map((c) => ({ title: c.title, root: c.root, reason: t("still unpacking or downloading", "ещё распаковывается или скачивается") })),
+      ...scan.no_exe.map((c) => ({ title: c.title, root: c.root, reason: t("no game .exe found", "не найден .exe игры") })),
     ];
     const added: { appid: number; cand: be.Candidate; name: string; item: any }[] = [];
     for (const cand of scan.new) {
-      update({ busy: `Добавляю «${cand.title}»…` });
+      update({ busy: t(`Adding "${cand.title}"…`, `Добавляю «${cand.title}»…`) });
       try {
         const item = cand.steam_appid ? await storeItem(cand.steam_appid) : null;
         const name = storeName(item) || cand.title;
         const appid = await addShortcut(name, cand.exe, cand.start_dir, cand.launch_options, scan.compat_tool);
         await be.registerAdded(appid, { ...cand, title: name });
         added.push({ appid, cand, name, item });
-        log(`Добавлена «${name}»` + (cand.steam_appid ? ` (Steam ${cand.steam_appid})` : " — без данных Steam"));
-        if (!cand.steam_appid) attention.push({ title: name, root: cand.root, reason: "не найдена в Steam: укажите вручную" });
-        if (cand.ambiguous) attention.push({ title: name, root: cand.root, reason: `проверьте exe: ${cand.exe.split("/").pop()}` });
+        log(t(`Added "${name}"`, `Добавлена «${name}»`) + (cand.steam_appid ? ` (Steam ${cand.steam_appid})` : t(" — no Steam data", " — без данных Steam")));
+        if (!cand.steam_appid) attention.push({ title: name, root: cand.root, reason: t("not found on Steam: pick it by hand", "не найдена в Steam: укажите вручную") });
+        if (cand.ambiguous) attention.push({ title: name, root: cand.root, reason: t(`check the exe: ${cand.exe.split("/").pop()}`, `проверьте exe: ${cand.exe.split("/").pop()}`) });
       } catch (e) {
-        log(`«${cand.title}» не добавлена: ${e}`, "error");
+        log(t(`"${cand.title}" was not added: ${e}`, `«${cand.title}» не добавлена: ${e}`), "error");
       }
     }
     if (added.length) {
       toaster.toast({
         title: "Custom Games",
-        body: added.length === 1 ? `Добавлена игра «${added[0].name}»` : `Добавлено игр: ${added.length}`,
+        body: added.length === 1 ? t(`Added "${added[0].name}"`, `Добавлена игра «${added[0].name}»`)
+          : t(`Games added: ${added.length}`, `Добавлено игр: ${added.length}`),
       });
     }
     update({ attention, lastScan: Date.now() });
     await loadState();
     if (getPluginState().settings?.art_new_games) {
       for (const a of added) {
-        update({ busy: `Обложки для «${a.name}»…` });
+        update({ busy: t(`Artwork for "${a.name}"…`, `Обложки для «${a.name}»…`) });
         await artworkForNewGame(a.appid, a.cand.steam_appid, a.name, a.item);
       }
     }
-    update({ busy: "Сопоставляю игры со Steam…" });
+    update({ busy: t("Matching games with Steam…", "Сопоставляю игры со Steam…") });
     const res = await be.resolveGames(false);
     if (res.ok) update({ games: res.games });
-    result = added.length ? `Добавлено игр: ${added.length}` : "Новых игр нет";
-    if (attention.length) result += ` · требуют внимания: ${attention.length}`;
+    result = added.length ? t(`Games added: ${added.length}`, `Добавлено игр: ${added.length}`) : t("No new games", "Новых игр нет");
+    if (attention.length) result += t(` · need attention: ${attention.length}`, ` · требуют внимания: ${attention.length}`);
   } catch (e) {
-    log(`Обновление библиотеки: ${e}`, "error");
-    result = `Ошибка: ${e}`;
+    log(t(`Library update: ${e}`, `Обновление библиотеки: ${e}`), "error");
+    result = t(`Error: ${e}`, `Ошибка: ${e}`);
   } finally {
     await atLeast(started);
     update({ busy: null, libResult: result ? `${clock()} · ${result}` : null });
@@ -189,23 +192,23 @@ export async function runArtQueue(manual = false): Promise<void> {
     if (manual) update({ artResult: `${clock()} · ${text}` });
   };
   if (!s.upscale) {
-    finish("подгонка размера выключена");
+    finish(t("resizing is turned off", "подгонка размера выключена"));
     return;
   }
   if (gameRunning()) {
-    finish("игра запущена — проверю после её закрытия");
+    finish(t("a game is running — will check after it closes", "игра запущена — проверю после её закрытия"));
     return;
   }
   artRunning = true;
   const started = Date.now();
   let done = 0, failed = 0, total = 0;
   // the background check every 90 s shows itself only when it has something to do
-  if (manual) update({ artBusy: "Проверяю обложки…" });
+  if (manual) update({ artBusy: t("Checking artwork…", "Проверяю обложки…") });
   try {
     const scan = await be.artScan(null);
     if (!scan.ok) {
-      log(`Проверка обложек: ${scan.error}`, "warn");
-      finish(`ошибка: ${scan.error}`);
+      log(t(`Artwork check: ${scan.error}`, `Проверка обложек: ${scan.error}`), "warn");
+      finish(t(`error: ${scan.error}`, `ошибка: ${scan.error}`));
       return;
     }
     update({ upscaler: scan.installed });
@@ -215,13 +218,14 @@ export async function runArtQueue(manual = false): Promise<void> {
     for (const job of jobs) {
       if (gameRunning()) break; // the GPU belongs to the game; continue after it closes
       const title = getPluginState().games[String(job.appid)]?.title;
-      update({ artQueue: jobs.length - done, artBusy: `${job.action === "down" ? "Уменьшаю" : "Апскейл"} ${done + failed + 1} из ${jobs.length}`
+      update({ artQueue: jobs.length - done, artBusy: (job.action === "down" ? t("Downscaling", "Уменьшаю") : t("Upscaling", "Апскейл"))
+        + t(` ${done + failed + 1} of ${jobs.length}`, ` ${done + failed + 1} из ${jobs.length}`)
         + (title ? `: ${title}` : "") });
       const r = await be.artProcess(job);
       if (!r.ok) {
         if (!r.stale) {
           failed++;
-          log(`Обложка ${job.kind} ${job.appid}: ${r.error}`, "warn");
+          log(t(`Artwork ${job.kind} ${job.appid}: ${r.error}`, `Обложка ${job.kind} ${job.appid}: ${r.error}`), "warn");
         }
         continue;
       }
@@ -241,19 +245,20 @@ export async function runArtQueue(manual = false): Promise<void> {
       } catch (e) {
         failed++;
         await be.artFailed(job.appid, job.kind, String(e));
-        log(`Не удалось поставить ${job.kind} ${job.appid}: ${e}`, "warn");
+        log(t(`Could not set ${job.kind} ${job.appid}: ${e}`, `Не удалось поставить ${job.kind} ${job.appid}: ${e}`), "warn");
       }
     }
     update({ artQueue: Math.max(0, jobs.length - done - failed) });
-    if (done) log(`Обложки приведены к нужному размеру: ${done}`);
+    if (done) log(t(`Artwork resized: ${done}`, `Обложки приведены к нужному размеру: ${done}`));
   } finally {
     if (manual) await atLeast(started);
     artRunning = false;
     update({ artBusy: null });
   }
   const skipped = total - done - failed;
-  finish(!total ? "все обложки нужного размера"
-    : `обновлено ${done}` + (failed ? `, ошибок ${failed}` : "") + (skipped > 0 ? `, отложено ${skipped} (запущена игра)` : ""));
+  finish(!total ? t("all artwork is the right size", "все обложки нужного размера")
+    : t(`updated ${done}`, `обновлено ${done}`) + (failed ? t(`, errors ${failed}`, `, ошибок ${failed}`) : "")
+      + (skipped > 0 ? t(`, postponed ${skipped} (a game is running)`, `, отложено ${skipped} (запущена игра)`) : ""));
 }
 
 let timer: number | null = null;

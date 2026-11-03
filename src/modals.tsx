@@ -2,6 +2,7 @@ import { DialogButton, Focusable, ModalRoot, Navigation, showModal, TextField } 
 import Hls from "hls.js/dist/hls.light.mjs";
 import { useEffect, useRef, useState } from "react";
 import * as be from "./backend";
+import { t } from "./i18n";
 import { log, update } from "./state";
 import { Styles } from "./styles";
 
@@ -26,25 +27,27 @@ function MappingModal({ appid, title, closeModal }: { appid: number; title: stri
     const r = await be.setMapping(appid, steamAppid);
     if (r.ok) {
       update({ games: r.games });
-      log(steamAppid ? `«${title}» привязана к Steam: ${name} (${steamAppid})` : `«${title}»: привязка к Steam убрана`);
+      log(steamAppid ? t(`"${title}" linked to Steam: ${name} (${steamAppid})`, `«${title}» привязана к Steam: ${name} (${steamAppid})`)
+        : t(`"${title}": Steam link removed`, `«${title}»: привязка к Steam убрана`));
     }
     closeModal?.();
   };
 
   return (
     <ModalRoot onCancel={closeModal} closeModal={closeModal}>
-      <div style={{ fontSize: 22, color: "#fff", marginBottom: 12 }}>Какая это игра в Steam?</div>
-      <div className="cg-dim" style={{ marginBottom: 12 }}>«{title}» — данные, новости и достижения возьмутся у выбранной игры.</div>
+      <div style={{ fontSize: 22, color: "#fff", marginBottom: 12 }}>{t("Which Steam game is this?", "Какая это игра в Steam?")}</div>
+      <div className="cg-dim" style={{ marginBottom: 12 }}>{t(`"${title}": info, news and achievements will come from the chosen game.`,
+        `«${title}» — данные, новости и достижения возьмутся у выбранной игры.`)}</div>
       <Focusable style={{ display: "flex", gap: 10, alignItems: "center" }} flow-children="row">
         <div style={{ flex: 1 }}>
           <TextField value={term} onChange={(e) => setTerm(e.target.value)} />
         </div>
-        <DialogButton style={{ width: "auto", minWidth: 0, padding: "0 20px" }} onClick={() => search(term)}>Найти</DialogButton>
+        <DialogButton style={{ width: "auto", minWidth: 0, padding: "0 20px" }} onClick={() => search(term)}>{t("Search", "Найти")}</DialogButton>
       </Focusable>
       <div style={{ marginTop: 12, maxHeight: "50vh", overflowY: "auto" }}>
-        {error && <div className="cg-dim">Ошибка поиска: {error}</div>}
-        {!items && !error && <div className="cg-dim">Ищу…</div>}
-        {items && !items.length && <div className="cg-dim">Ничего не найдено. Попробуйте другое название.</div>}
+        {error && <div className="cg-dim">{t("Search failed: ", "Ошибка поиска: ")}{error}</div>}
+        {!items && !error && <div className="cg-dim">{t("Searching…", "Ищу…")}</div>}
+        {items && !items.length && <div className="cg-dim">{t("Nothing found. Try another name.", "Ничего не найдено. Попробуйте другое название.")}</div>}
         {items?.map((it) => (
           <Focusable key={it.id} className="cg-card cg-search-row" onActivate={() => choose(it.id, it.name)}
             onClick={() => choose(it.id, it.name)}>
@@ -55,8 +58,8 @@ function MappingModal({ appid, title, closeModal }: { appid: number; title: stri
         ))}
       </div>
       <Focusable style={{ display: "flex", gap: 10, marginTop: 14 }} flow-children="row">
-        <DialogButton onClick={() => choose(0, "")}>Это не игра из Steam</DialogButton>
-        <DialogButton onClick={closeModal}>Отмена</DialogButton>
+        <DialogButton onClick={() => choose(0, "")}>{t("Not a Steam game", "Это не игра из Steam")}</DialogButton>
+        <DialogButton onClick={closeModal}>{t("Cancel", "Отмена")}</DialogButton>
       </Focusable>
     </ModalRoot>
   );
@@ -116,16 +119,16 @@ function ViewerModal({ items, start, closeModal }: { items: ViewerItem[]; start:
           {!it.video && (
             <img key={it.src} src={it.src} onLoad={() => setLoaded(true)} style={{ opacity: loaded ? 1 : 0 }} />
           )}
-          {!it.video && !loaded && <div className="cg-stage-note">Загрузка…</div>}
-          {it.video && failed && <div className="cg-stage-note">Не удалось воспроизвести видео.</div>}
+          {!it.video && !loaded && <div className="cg-stage-note">{t("Loading…", "Загрузка…")}</div>}
+          {it.video && failed && <div className="cg-stage-note">{t("Could not play the video.", "Не удалось воспроизвести видео.")}</div>}
         </div>
         <Focusable className="cg-viewer-buttons" flow-children="row">
-          {items.length > 1 && <DialogButton className="cg-btn" onClick={() => go(-1)}>‹ Назад</DialogButton>}
-          {items.length > 1 && <DialogButton className="cg-btn" onClick={() => go(1)}>Дальше ›</DialogButton>}
+          {items.length > 1 && <DialogButton className="cg-btn" onClick={() => go(-1)}>{t("‹ Previous", "‹ Назад")}</DialogButton>}
+          {items.length > 1 && <DialogButton className="cg-btn" onClick={() => go(1)}>{t("Next ›", "Дальше ›")}</DialogButton>}
           {it.fallback && (
-            <DialogButton className="cg-btn" onClick={() => { closeModal?.(); openUrl(it.fallback!); }}>Открыть в магазине</DialogButton>
+            <DialogButton className="cg-btn" onClick={() => { closeModal?.(); openUrl(it.fallback!); }}>{t("Open in the store", "Открыть в магазине")}</DialogButton>
           )}
-          <DialogButton className="cg-btn" onClick={closeModal}>Закрыть</DialogButton>
+          <DialogButton className="cg-btn" onClick={closeModal}>{t("Close", "Закрыть")}</DialogButton>
         </Focusable>
         {items.length > 1 && <div className="cg-dim">{i + 1} / {items.length}</div>}
       </div>

@@ -11,6 +11,7 @@ import { patchLibraryApp, unpatchLibraryApp } from "./pagePatch";
 import { watchAchievements } from "./achievementWatch";
 import { getPluginState, log, update, usePluginState } from "./state";
 import { allShortcuts } from "./steam";
+import { t } from "./i18n";
 
 /** Button text: a spinner and what is going on while busy (the button is disabled then), else its normal label. */
 function BusyLabel({ busy, idle }: { busy: string | null; idle: string }) {
@@ -23,16 +24,17 @@ function BusyLabel({ busy, idle }: { busy: string | null; idle: string }) {
   );
 }
 
-function ago(t: number | null): string {
-  if (!t) return "ещё не было";
-  const m = Math.round((Date.now() - t) / 60000);
-  return m < 1 ? "только что" : m < 60 ? `${m} мин назад` : `${Math.round(m / 60)} ч назад`;
+function ago(time: number | null): string {
+  if (!time) return t("not yet", "ещё не было");
+  const m = Math.round((Date.now() - time) / 60000);
+  return m < 1 ? t("just now", "только что") : m < 60 ? t(`${m} min ago`, `${m} мин назад`)
+    : t(`${Math.round(m / 60)} h ago`, `${Math.round(m / 60)} ч назад`);
 }
 
 async function setSetting(key: string, value: unknown) {
   const r = await be.setSetting(key, value);
   if (r.ok) update({ settings: r.settings, games: r.games, upscaler: r.upscaler });
-  else log(`Настройка ${key}: ${r.error}`, "error");
+  else log(t(`Setting ${key}: ${r.error}`, `Настройка ${key}: ${r.error}`), "error");
 }
 
 function LibrarySection() {
@@ -45,14 +47,15 @@ function LibrarySection() {
   });
   const linked = shortcuts.filter((s) => st.games[String(s.appid)]?.steam_appid).length;
   return (
-    <PanelSection title="Библиотека">
+    <PanelSection title={t("Library", "Библиотека")}>
       <PanelSectionRow>
         <ButtonItem layout="below" disabled={!!st.busy} onClick={() => refreshLibrary()} description={st.busy ? undefined : st.libResult}>
-          <BusyLabel busy={st.busy} idle="Обновить библиотеку" />
+          <BusyLabel busy={st.busy} idle={t("Update library", "Обновить библиотеку")} />
         </ButtonItem>
       </PanelSectionRow>
       <PanelSectionRow>
-        <Field label="Проверка" description={`Сторонних игр: ${shortcuts.length}, с данными Steam: ${linked}`}>
+        <Field label={t("Last check", "Проверка")} description={t(`Non-Steam games: ${shortcuts.length}, with Steam data: ${linked}`,
+          `Сторонних игр: ${shortcuts.length}, с данными Steam: ${linked}`)}>
           {ago(st.lastScan)}
         </Field>
       </PanelSectionRow>
@@ -63,7 +66,7 @@ function LibrarySection() {
       ))}
       {!!unlinked.length && (
         <PanelSectionRow>
-          <Field label="Без данных Steam" description="Нажмите, чтобы выбрать игру в Steam" />
+          <Field label={t("No Steam data", "Без данных Steam")} description={t("Press to pick the game on Steam", "Нажмите, чтобы выбрать игру в Steam")} />
         </PanelSectionRow>
       )}
       {unlinked.map((s) => (
@@ -76,17 +79,17 @@ function LibrarySection() {
 }
 
 const DEPS_BADGE = {
-  ready: { icon: <FaCheckCircle />, text: "Готово", color: "#59bf40" },
-  installing: { icon: <FaSpinner />, text: "Скачиваются", color: "#dcdedf" },
-  missing: { icon: <FaSpinner />, text: "Ожидание", color: "#8b929a" },
-  error: { icon: <FaExclamationTriangle />, text: "Ошибка", color: "#e57373" },
+  ready: { icon: <FaCheckCircle />, text: () => t("Ready", "Готово"), color: "#59bf40" },
+  installing: { icon: <FaSpinner />, text: () => t("Downloading", "Скачиваются"), color: "#dcdedf" },
+  missing: { icon: <FaSpinner />, text: () => t("Waiting", "Ожидание"), color: "#8b929a" },
+  error: { icon: <FaExclamationTriangle />, text: () => t("Error", "Ошибка"), color: "#e57373" },
 };
 
 function DepsBadge({ status }: { status: be.DepsState["status"] }) {
   const b = DEPS_BADGE[status];
   return (
     <span style={{ display: "flex", alignItems: "center", gap: 6, color: b.color, whiteSpace: "nowrap", fontSize: 15 }}>
-      {b.icon}{b.text}
+      {b.icon}{b.text()}
     </span>
   );
 }
@@ -96,13 +99,14 @@ function ArtworkSection() {
   const s = st.settings;
   if (!s) return null;
   const deps = st.deps;
-  const depsText = deps.status === "ready" ? "Установлены"
-    : deps.status === "installing" ? "Скачиваются (около 45 МБ)…"
-    : deps.status === "error" ? `Ошибка: ${deps.error}` : "Ещё не установлены";
+  const depsText = deps.status === "ready" ? t("Installed", "Установлены")
+    : deps.status === "installing" ? t("Downloading (about 45 MB)…", "Скачиваются (около 45 МБ)…")
+    : deps.status === "error" ? t(`Error: ${deps.error}`, `Ошибка: ${deps.error}`) : t("Not installed yet", "Ещё не установлены");
   return (
-    <PanelSection title="Обложки">
+    <PanelSection title={t("Artwork", "Обложки")}>
       <PanelSectionRow>
-        <Field label="Зависимости" description="Апскейлер upscayl-bin (Real-ESRGAN на видеокарте) и две модели">
+        <Field label={t("Dependencies", "Зависимости")} description={t("The upscayl-bin upscaler (Real-ESRGAN on the GPU) and two models",
+          "Апскейлер upscayl-bin (Real-ESRGAN на видеокарте) и две модели")}>
           <DepsBadge status={deps.status} />
         </Field>
       </PanelSectionRow>
@@ -110,31 +114,32 @@ function ArtworkSection() {
         <PanelSectionRow>
           <ButtonItem layout="below" disabled={deps.status === "installing"} onClick={() => installDeps()}
             description={depsText}>
-            {deps.status === "installing" ? "Устанавливаются…" : "Установить зависимости"}
+            {deps.status === "installing" ? t("Installing…", "Устанавливаются…") : t("Install dependencies", "Установить зависимости")}
           </ButtonItem>
         </PanelSectionRow>
       )}
       <PanelSectionRow>
-        <Field label="Очередь" description="Обрабатывается, пока игра не запущена">
-          {st.artQueue ? `осталось ${st.artQueue}` : `готово ${st.artDone}`}
+        <Field label={t("Queue", "Очередь")} description={t("Worked on while no game is running", "Обрабатывается, пока игра не запущена")}>
+          {st.artQueue ? t(`${st.artQueue} left`, `осталось ${st.artQueue}`) : t(`${st.artDone} done`, `готово ${st.artDone}`)}
         </Field>
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="Приводить обложки к нужному размеру" description="Маленькие увеличиваются на видеокарте, большие уменьшаются"
+        <ToggleField label={t("Keep artwork at the right size", "Приводить обложки к нужному размеру")}
+          description={t("Small images are upscaled on the GPU, big ones scaled down", "Маленькие увеличиваются на видеокарте, большие уменьшаются")}
           checked={s.upscale} onChange={(v) => setSetting("upscale", v)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="И у игр из Steam" description="Картинки, поставленные вручную или плагином SteamGridDB"
+        <ToggleField label={t("Steam games too", "И у игр из Steam")} description={t("Images set by hand or with the SteamGridDB plugin", "Картинки, поставленные вручную или плагином SteamGridDB")}
           checked={s.upscale_steam_games} onChange={(v) => setSetting("upscale_steam_games", v)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="Обложки для новых игр" description="Официальные картинки игры из Steam"
+        <ToggleField label={t("Artwork for new games", "Обложки для новых игр")} description={t("The game's official images from Steam", "Официальные картинки игры из Steam")}
           checked={s.art_new_games} onChange={(v) => setSetting("art_new_games", v)} />
       </PanelSectionRow>
       <PanelSectionRow>
         <ButtonItem layout="below" disabled={!!st.artBusy} onClick={() => runArtQueue(true)}
           description={st.artBusy ? undefined : st.artResult}>
-          <BusyLabel busy={st.artBusy} idle="Проверить обложки сейчас" />
+          <BusyLabel busy={st.artBusy} idle={t("Check artwork now", "Проверить обложки сейчас")} />
         </ButtonItem>
       </PanelSectionRow>
     </PanelSection>
@@ -153,9 +158,9 @@ function SettingsSection() {
     setDir("");
   };
   return (
-    <PanelSection title="Настройки">
+    <PanelSection title={t("Settings", "Настройки")}>
       <PanelSectionRow>
-        <div className={staticClasses.Text} style={{ fontSize: 14, color: "#dcdedf", marginBottom: 4 }}>Папки с играми</div>
+        <div className={staticClasses.Text} style={{ fontSize: 14, color: "#dcdedf", marginBottom: 4 }}>{t("Game folders", "Папки с играми")}</div>
       </PanelSectionRow>
       {s.game_dirs.map((d) => (
         <PanelSectionRow key={d}>
@@ -176,15 +181,15 @@ function SettingsSection() {
         </Focusable>
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="Игры из Anker Launcher" description="Брать игры и их параметры запуска из библиотеки Anker"
+        <ToggleField label={t("Games from Anker Launcher", "Игры из Anker Launcher")} description={t("Take games and their launch options from the Anker library", "Брать игры и их параметры запуска из библиотеки Anker")}
           checked={s.anker} onChange={(v) => setSetting("anker", v)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="Искать новые игры при запуске Steam" checked={s.scan_on_start}
+        <ToggleField label={t("Look for new games when Steam starts", "Искать новые игры при запуске Steam")} checked={s.scan_on_start}
           onChange={(v) => setSetting("scan_on_start", v)} />
       </PanelSectionRow>
       <PanelSectionRow>
-        <ToggleField label="Тексты Steam на русском" description="Описание, жанры и достижения; иначе на языке Steam"
+        <ToggleField label={t("Store texts in Russian", "Тексты Steam на русском")} description={t("Description, genres and achievements; otherwise in Steam's language", "Описание, жанры и достижения; иначе на языке Steam")}
           checked={s.data_lang === "russian"} onChange={(v) => setSetting("data_lang", v ? "russian" : "")} />
       </PanelSectionRow>
     </PanelSection>
