@@ -1,0 +1,11 @@
+{
+  "name": "Custom Games",
+  "author": "Kyrylo",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["non-steam", "library", "artwork", "achievements"],
+    "description": "Finds games outside Steam (folders, Anker Launcher), adds them with upscaled artwork and fills their library pages with the real game's Steam info, news and achievements.",
+    "image": "https://raw.githubusercontent.com/SteamGridDB/decky-steamgriddb/main/thumb.png"
+  }
+}
