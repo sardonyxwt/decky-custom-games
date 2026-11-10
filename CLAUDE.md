@@ -14,7 +14,7 @@ game page tabs with the real game's Steam data. UI mock-ups: `mockups/`.
     Steam" = a shortcut's exe inside the game folder; `game_root` steps over containers (AnkerGames/Games); Anker's real exe
     path is the adoption `anchor`, the launch profile path is often wrong
   - `exepick.py` — choosing the exe (root launcher > Shipping, the Vulkan build, never redist/crash reporters/crack folders)
-  - `appid.py` — AppID from `steam_appid.txt` / `steam_emu.ini` / emulator configs, from emulator save folders in the prefix
+  - `appid.py` — AppID (after Anker's catalogue `steam_app_id`, which wins: repack configs can be another game's) from `steam_appid.txt` / `steam_emu.ini` / emulator configs, from emulator save folders in the prefix
     (`GSE Saves/<id>`, `RUNE/<id>`…); 480 (Spacewar) is ignored
   - `store.py` — store name search (exact match after normalisation only), appdetails, achievement schema
     (`IPlayerService/GetGameAchievements`, no key)

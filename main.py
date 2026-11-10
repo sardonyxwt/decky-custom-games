@@ -183,7 +183,7 @@ class Plugin:
         found = sources.find_new(decky.DECKY_USER_HOME, s["game_dirs"], s["anker"],
                                  steamenv.installed_steam_dirs(libs), shortcuts, s["hidden"])
         for c in found["new"]:
-            hit = appid_mod.from_files(c["root"], c["exe"])
+            hit = (c["steam_appid"], "anker") if c.get("steam_appid") else appid_mod.from_files(c["root"], c["exe"])
             if not hit:
                 try:
                     m = store.match(c["title"])
@@ -221,6 +221,7 @@ class Plugin:
         s = self._settings()
         root, user, libs = self._steam()
         games = self._games()
+        anker = sources.anker_appids(decky.DECKY_USER_HOME) if s["anker"] else {}
         now = int(time.time())
         changed = 0
         for sc in steamenv.read_shortcuts(root, user):
@@ -237,11 +238,18 @@ class Plugin:
                                   "checked_at": now}
                     changed += 1
                 continue
-            if g.get("steam_appid") and g.get("appid_source", "").startswith(("file:", "prefix:")) and not force:
+            # Anker's catalogue id wins and also corrects an earlier wrong one taken from the repack's files.
+            real_exe = os.path.realpath(exe)
+            hit = next(((n, "anker") for r, n in anker.items() if real_exe.startswith(r + "/")), None)
+            if hit and (g.get("steam_appid"), g.get("appid_source")) == hit and not force:
+                continue
+            if not hit and g.get("steam_appid") and not force \
+                    and g.get("appid_source", "").startswith(("file:", "prefix:", "anker")):
                 continue
             groot = g.get("root") or self._game_root(exe, s)
-            hit = appid_mod.from_files(groot, exe) if os.path.isdir(groot) else None
-            hit = hit or appid_mod.from_prefix(steamenv.prefix_dirs(libs, sc["appid"]))
+            if not hit:
+                hit = appid_mod.from_files(groot, exe) if os.path.isdir(groot) else None
+                hit = hit or appid_mod.from_prefix(steamenv.prefix_dirs(libs, sc["appid"]))
             if not hit and g.get("steam_appid") and g.get("appid_source", "").startswith("name:"):
                 continue  # keep the earlier name match
             if not hit and (force or now - int(g.get("checked_at") or 0) > NAME_RETRY_SECONDS):

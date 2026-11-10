@@ -84,9 +84,11 @@ class Layout(unittest.TestCase):
                 "244": {"title": "Hollow Knight", "root": f"{self.steam}/steamapps/common/Hollow Knight",
                         "launch_profiles": [{"executable": "hollow_knight.exe"}]},
                 "3953": {"title": "over the hill", "root": f"{g}/AnkerGames/Games/over the hill-3953",
-                         "launch_profiles": [{"executable": "over the hill.exe", "arguments": "-dx11"}]},
+                         "launch_profiles": [{"executable": "over the hill.exe", "arguments": "-dx11"}],
+                         "source": {"source": {"steam_app_id": "2397840"}}},
                 "323": {"title": "Hades", "root": f"{g}/Hades/Hades/x64",
-                        "launch_profiles": [{"executable": "x86/Hades.exe"}], "adoption": {"anchor": "Hades.exe"}},
+                        "launch_profiles": [{"executable": "x86/Hades.exe"}], "adoption": {"anchor": "Hades.exe"},
+                        "source": {"source": {"steam_app_id": "480"}}},
             }, "removed": {}}, f)
         old = time.time() - 3600
         for dirpath, dirnames, filenames in os.walk(g):
@@ -133,6 +135,10 @@ class Layout(unittest.TestCase):
         self.assertTrue(found["Hades"].endswith("Hades/x64/Hades.exe"))  # the anchor, not the broken profile path
         self.assertTrue(found["over the hill"].endswith("over the hill-3953/over the hill.exe"))
         self.assertEqual([c["title"] for c in res["busy"]], ["Fresh Game"])
+        # The catalogue's Steam AppID comes along; Spacewar (480) is not a game id
+        self.assertEqual(anker["steam_appid"], 2397840)
+        ids = sources.anker_appids(self.home)
+        self.assertEqual(ids, {os.path.realpath(f"{self.games}/AnkerGames/Games/over the hill-3953"): 2397840})
 
     def test_shortcuts_vdf(self):
         path = f"{self.steam}/userdata/42/config/shortcuts.vdf"

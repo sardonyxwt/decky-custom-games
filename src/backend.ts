@@ -20,7 +20,7 @@ export type ToggleSetting = "anker" | "scan_on_start" | "art_new_games" | "upsca
 /** What the plugin knows about a non-Steam shortcut, keyed by the shortcut's appid. */
 export interface GameRecord {
   steam_appid: number;
-  appid_source: string; // "file:<path>", "prefix:<emulator>", "name:<store name>", "manual", "not_a_game", ""
+  appid_source: string; // "anker", "file:<path>", "prefix:<emulator>", "name:<store name>", "manual", "not_a_game", ""
   title: string;
   root?: string;
   exe?: string;

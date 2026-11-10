@@ -29,7 +29,7 @@ SAVE_DIRS = [
 MAX_DEPTH = 5
 
 
-def _valid(n: int) -> bool:
+def valid(n: int) -> bool:
     return n not in BOGUS and 10 <= n < 100_000_000
 
 
@@ -79,7 +79,7 @@ def _read_id(path: str, low: str) -> Optional[int]:
     if not m:
         return None
     n = int(m.group(1))
-    return n if _valid(n) else None
+    return n if valid(n) else None
 
 
 def from_prefix(prefixes: List[str]) -> Optional[Tuple[int, str]]:
@@ -93,7 +93,7 @@ def from_prefix(prefixes: List[str]) -> Optional[Tuple[int, str]]:
             except OSError:
                 continue
             for name in names:
-                if not name.isdigit() or not _valid(int(name)):
+                if not name.isdigit() or not valid(int(name)):
                     continue
                 t = os.path.getmtime(os.path.join(d, name))
                 if best is None or t > best[0]:

@@ -6,6 +6,7 @@ import re
 import time
 from typing import Dict, Iterable, List, Optional
 
+from . import appid as appid_mod
 from . import exepick
 from .store import title_from_folder
 
@@ -59,18 +60,41 @@ def anker_exe(root: str, rel: str, anchor: str) -> str:
     return exepick.best(root)[0]
 
 
+def _anker_library(home: str) -> List[Dict]:
+    try:
+        with open(os.path.join(home, ".config", "net.ankergames.launcher", "library.json"), encoding="utf-8") as f:
+            games = json.load(f).get("games") or {}
+    except (OSError, ValueError, AttributeError):
+        return []
+    return [g for g in (games.values() if isinstance(games, dict) else games) if isinstance(g, dict)]
+
+
+def _anker_steam_appid(g: Dict) -> int:
+    """The Steam AppID the AnkerGames catalogue gives the game; it beats the repack's own files, whose emulator
+    configs are sometimes copied from another game (Cat Quest ships the steam_emu.ini of Sins of a Solar Empire II)."""
+    src = (g.get("source") or {}).get("source") or {}
+    try:
+        n = int(str(src.get("steam_app_id") or "0").strip())
+    except ValueError:
+        return 0
+    return n if appid_mod.valid(n) else 0
+
+
+def anker_appids(home: str) -> Dict[str, int]:
+    """Real game root -> Steam AppID, for Anker games whose catalogue entry has one."""
+    out = {}
+    for g in _anker_library(home):
+        n = _anker_steam_appid(g)
+        if n and g.get("root"):
+            out[_real(g["root"])] = n
+    return out
+
+
 def anker_games(home: str, steam_dirs: List[str]) -> List[Dict]:
     """Installed games from Anker Launcher's library.json (a Linux AppImage launcher for AnkerGames repacks)."""
-    cfg = os.path.join(home, ".config", "net.ankergames.launcher")
-    try:
-        with open(os.path.join(cfg, "library.json"), encoding="utf-8") as f:
-            lib = json.load(f)
-    except (OSError, ValueError):
-        return []
-    games = lib.get("games") or {}
     out = []
-    for g in (games.values() if isinstance(games, dict) else games):
-        if not isinstance(g, dict) or g.get("uninstalling"):
+    for g in _anker_library(home):
+        if g.get("uninstalling"):
             continue
         root = g.get("root") or ""
         if not root or not os.path.isdir(root) or any(_inside(root, d) for d in steam_dirs):
@@ -90,6 +114,7 @@ def anker_games(home: str, steam_dirs: List[str]) -> List[Dict]:
             "launch_options": prof.get("arguments") or "",
             "ambiguous": False,
             "anker_id": g.get("game_id"),
+            "steam_appid": _anker_steam_appid(g),
         })
     return out
 

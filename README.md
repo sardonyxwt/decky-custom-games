@@ -17,8 +17,9 @@ size, and their library page shows the real game's Steam info, news, trailers an
 - **Update library** — finds new games in your games folders and in Anker Launcher's library and adds them to Steam
   while it runs (no restart): the official Steam name, Proton, the right executable and launch options.
   Runs on Steam start and from a button.
-- **Steam AppID detection** — from `steam_appid.txt` and Steam-emulator configs in the game folder, from the
-  emulator's save folders in the Proton prefix, else by an exact store-name match. Fixable by hand in the game page.
+- **Steam AppID detection** — from Anker Launcher's catalogue for its games, from `steam_appid.txt` and
+  Steam-emulator configs in the game folder, from the emulator's save folders in the Proton prefix, else by an exact
+  store-name match. Fixable by hand in the game page.
 - **Artwork** — the game's official Steam art (portrait, wide capsule, hero, logo, icon) for new games.
 - **Artwork at the right size** — every library image is kept at the size Steam shows (portrait 1200×1800,
   wide 1840×860, hero 5760×1860, logos 1000–2400 px wide): small ones are upscaled on the GPU
