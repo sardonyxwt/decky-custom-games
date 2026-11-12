@@ -98,6 +98,10 @@ export interface AchievementDef {
   name: string; title: string; desc: string; icon: string; icon_gray: string; hidden: boolean; pct: number;
 }
 
+// Where `icon`/`icon_gray` live: `${ACHIEVEMENT_ICON_BASE}/<steam appid>/<file>`. The older
+// cdn.akamai/cdn.cloudflare "steamcommunity/public/images/apps" path 404s for newer games (e.g. 3624140).
+export const ACHIEVEMENT_ICON_BASE = "https://shared.fastly.steamstatic.com/community_assets/images/apps";
+
 export const storeDetails = callable<[steamAppid: number, lang: string], { ok: true; details: StoreDetails } | Fail>("store_details");
 export const achievementSchema = callable<[steamAppid: number, lang: string], { ok: true; achievements: AchievementDef[] } | Fail>("achievement_schema");
 export const pollAchievements = callable<[appid: number, steamAppid: number],

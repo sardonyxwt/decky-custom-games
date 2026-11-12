@@ -2,6 +2,7 @@
 import { DialogButton, Focusable } from "@decky/ui";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { FaCloud, FaComments, FaGamepad, FaThumbsUp, FaTrophy, FaUser, FaUsers } from "react-icons/fa";
+import { ACHIEVEMENT_ICON_BASE } from "./backend";
 import type { AchievementDef, GameRecord } from "./backend";
 import { openMapping, openUrl, openViewer } from "./modals";
 import {
@@ -18,7 +19,6 @@ export interface TabProps { appid: number; game: GameRecord; native: ReactNode }
 // Steam's Focusable takes "focusable" for items that do nothing on A but must be reachable with the D-pad
 // (reading text, browsing achievements). Decky's typings do not list it.
 const READABLE = { focusable: true } as any;
-const ICON_BASE = "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps";
 
 /**
  * The game page's scroll containers are wider than the screen (Steam's blurred background canvas sticks out),
@@ -144,7 +144,7 @@ export function ActivityTab({ appid, game, native }: TabProps) {
         <div className="cg-achday-list">
           {g.list.slice(0, 8).map((d) => (
             <div key={d.name} className="cg-achday-item">
-              <img src={`${ICON_BASE}/${sid}/${d.icon}`} />
+              <img src={`${ACHIEVEMENT_ICON_BASE}/${sid}/${d.icon}`} />
               <div><div className="cg-ach-title">{d.title}</div><div className="cg-ach-desc">{d.desc}</div></div>
             </div>
           ))}
@@ -357,7 +357,7 @@ export function YourStuffTab({ appid, game, native }: TabProps) {
           <Focusable className="cg-ach-grid" flow-children="grid">
             {earned.map((a) => (
               <Focusable key={a.name} className="cg-card cg-ach" {...READABLE}>
-                <img src={`${ICON_BASE}/${sid}/${a.icon}`} />
+                <img src={`${ACHIEVEMENT_ICON_BASE}/${sid}/${a.icon}`} />
                 <div className="cg-ach-text">
                   <div className="cg-ach-title">{a.title}</div>
                   <div className="cg-ach-desc">{a.desc}</div>
@@ -370,7 +370,7 @@ export function YourStuffTab({ appid, game, native }: TabProps) {
           <Focusable className="cg-ach-grid" flow-children="grid">
             {locked.map((a) => (
               <Focusable key={a.name} className="cg-card cg-ach cg-locked" {...READABLE}>
-                <img src={`${ICON_BASE}/${sid}/${a.icon_gray || a.icon}`} />
+                <img src={`${ACHIEVEMENT_ICON_BASE}/${sid}/${a.icon_gray || a.icon}`} />
                 <div className="cg-ach-text">
                   <div className="cg-ach-title">{a.title}</div>
                   <div className="cg-ach-desc">{a.hidden && !a.desc ? t("Hidden achievement", "Скрытое достижение") : a.desc}</div>

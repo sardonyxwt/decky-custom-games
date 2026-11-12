@@ -11,7 +11,6 @@ declare const SteamClient: any;
 const POLL_MS = 3000;
 // Some emulators write the file only when the game closes: one more look after it exits.
 const AFTER_EXIT_MS = 6000;
-const ICON_BASE = "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps";
 
 const running = new Map<number, number>(); // shortcut appid -> interval id
 const schemas = new Map<number, Promise<Record<string, be.AchievementDef>>>();
@@ -44,7 +43,7 @@ async function announce(appid: number, steamAppid: number, items: { name: string
   const total = Object.keys(defs).length;
   for (const a of items) {
     const d = defs[a.name];
-    const icon = d?.icon ? `${ICON_BASE}/${steamAppid}/${d.icon}` : "";
+    const icon = d?.icon ? `${be.ACHIEVEMENT_ICON_BASE}/${steamAppid}/${d.icon}` : "";
     toaster.toast({
       title: d?.title || a.name,
       body: d?.desc || t("Achievement unlocked", "Достижение получено"),

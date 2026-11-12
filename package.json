@@ -1,6 +1,6 @@
 {
   "name": "decky-custom-games",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "Finds non-Steam games, adds them to Steam with artwork and fills their library pages with Steam store data, news and achievements",
   "type": "module",
   "scripts": {
