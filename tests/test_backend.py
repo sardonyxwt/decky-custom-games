@@ -120,6 +120,11 @@ class Layout(unittest.TestCase):
         self.assertTrue(got["First"]["earned"])
         self.assertEqual(got["First"]["time"], 1792954717)
         self.assertEqual((got["Second"]["cur"], got["Second"]["max"]), (3, 10))
+        # RUNE in Death Stranding 2 starts the file with a nameless section; the rest must still be read
+        ds2 = f"{pfx}/drive_c/users/Public/Documents/Steam/RUNE/3280350/achievements.ini"
+        touch(ds2, data=b"[]\r\nAchieved=1\r\nUnlockTime=1\r\n\r\n[SteamAchievements]\r\n00000=trophy_024\r\nCount=1\r\n\r\n"
+                        b"[trophy_024]\r\nAchieved=1\r\nCurProgress=22\r\nMaxProgress=42\r\nUnlockTime=1794183344\r\n")
+        self.assertEqual(achievements.read([ds2]), {"trophy_024": {"earned": True, "time": 1794183344, "cur": 22, "max": 42}})
         gse = f"{pfx}/drive_c/users/steamuser/AppData/Roaming/GSE Saves/2445690/achievements.json"
         touch(gse, data=json.dumps({"A": {"earned": True, "earned_time": 5}, "B": {"earned": False, "earned_time": 0}}).encode())
         self.assertEqual(achievements.read([gse])["A"]["time"], 5)
